@@ -510,4 +510,6 @@ pip-selfcheck.json
 # .pnp.*
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,Node,nextjs,yarn,python,venv,django,vite
-./major_project/vsd/static/overspeed
+./major_project/vsd/static/overspeeding
+major_project/vsd/static/overspeeding/
+major_project/vsd/static/overspeeding/*.jpeg
