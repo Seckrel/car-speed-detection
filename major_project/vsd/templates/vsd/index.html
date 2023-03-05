@@ -1,17 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vsd/base.html' %}
+{% block content %}
+<h1>Home</h1>
+<div class="d-flex justify-content-evenly align-items-center flex-column">
+    <!-- <div class="my-2">
+        <span class="fs-2 me-3">Speed Limit</span><input type="text" class="fs-2 text-center" value="{{speedl}}"
+            name="speedLimite" />
+    </div> -->
+    <div class="input-group mb-3 mt-2 w-25 shadow border-0">
+        <span class="input-group-text fs-3" id="basic-addon1">Speed Limit</span>
+        <input type="text" value="{{speedl}}" class="form-control fs-2 text-end" placeholder="Speed Limite" required
+            aria-label="speed limit" aria-describedby="basic-addon1">
+    </div>
+    <div class="d-flex justify-content-evenly align-items-center" style="max-height: 700px">
+        <img class="img-fluid shadow rounded" style="width: 1000px" src="{% url 'camfeed' %}" width="300" height="300"
+            alt="Video Feed"></img>
+        <div class="px-1 mt-4 d-flex justify-content-center align-items-center" style="overflow-y: scroll;">
+            <div class="mh-75">
+                <table id="mytable" class="table w-50 mh-75">
+                    <thead>
+                        <tr>
+                            <th scope="col">Car ID</th>
+                            <th scope="col">Speed</th>
+                            <th scope="col">Overspeed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home View</title>
-</head>
+</div>
 
-<body>
-    <h1>Home</h1>
-    {{ speedl }}
-    <img src="{% url 'camfeed' %}" width="300" height="300" alt="Video Feed"></img>
-</body>
 
-</html>
+
+<script type="text/javascript">
+    function updateTable() {
+        console.log("Running")
+        fetch("../todayData/")
+            .then(response => response.json())
+            .then(data => {
+                const carList = data.data;
+                const tableBody = document.getElementById("tableBody");
+                const rows = []
+                carList.forEach(car => {
+                    const row = document.createElement('tr');
+                    const carid = document.createElement('td');
+                    const speed = document.createElement("td");
+                    const overspeed = document.createElement("td");
+
+                    row.setAttribute("scope", "row")
+
+
+                    carid.textContent = car.car_id;
+                    speed.textContent = car.speed;
+                    overspeed.textContent = overspeed ? "Overspeed" : "";
+
+                    row.appendChild(carid);
+                    row.appendChild(speed);
+                    row.appendChild(overspeed);
+
+                    rows.push(row);
+                });
+
+                tableBody.innerHTML = "";
+                rows.forEach(row => tableBody.appendChild(row));
+            })
+    }
+
+    // updateTable();
+
+    setTimeout(updateTable, 1000);
+</script>
+
+{% endblock %}

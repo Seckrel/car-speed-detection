@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views import View
 import cv2
 from django.views.decorators import gzip
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, JsonResponse
 import threading
 import dlib
 import time
@@ -11,6 +11,9 @@ import os
 import numpy as np
 from django.conf import settings
 from .models import Car
+from datetime import date
+from django.utils import timezone
+from django.db.models import Q
 
 
 @gzip.gzip_page
@@ -26,6 +29,66 @@ def VideoFeed(request):
         return StreamingHttpResponse(gen(cam), content_type="multipart/x-mixed-replace; boundary=frame")
     except:
         pass
+
+
+def today_car_data(request):
+    if request.method == 'GET':
+        # Get today's date
+        today = timezone.now().date()
+
+        # Wait for new data to become available
+        while True:
+            # Query the Car model for objects where datetime is today's date
+            cars = Car.objects.filter(
+                Q(datetime__gte=today) & Q(datetime__lte=today))
+
+            # If there is new data, return a JSON response with the car data
+            if cars.exists():
+                car_data = []
+                for car in cars:
+                    data = {
+                        'car_id': car.car_id,
+                        'datetime': car.datetime,
+                        'speed': car.speed,
+                        'overspeeding': car.overspeeding,
+                        'link': car.link
+                    }
+                    car_data.append(data)
+
+                return JsonResponse({'data': car_data})
+
+
+class History(View):
+    def get(self, request):
+        context = {"error": "", "from_date": "",
+                   "to_date": ""}
+        return render(request, "vsd/history.html", context)
+
+    def post(self, request):
+        from_date_str = request.POST.get("from_date")
+        to_date_str = request.POST.get("to_date")
+
+        from_date = datetime.strptime(from_date_str, '%d/%m/%Y').date()
+        to_date = datetime.strptime(to_date_str, '%d/%m/%Y').date()
+
+        context = {"error": "", "from_date": from_date_str,
+                   "to_date": to_date_str}
+
+        if from_date and to_date:
+            if from_date <= to_date:
+                cars = Car.objects.filter(
+                    Q(datetime__gte=from_date) & Q(datetime__lte=to_date))
+                context["cars"] = cars
+                return render(request, "vsd/history.html", context)
+            else:
+                context["error"] = "To date cannot be less than from date"
+        else:
+            context["error"] = "Both date need to filled"
+
+        # Do something with my_data
+        today = timezone.now().date()
+
+        return render(request, "vsd/history.html", context)
 
 
 WIDTH = 1280
@@ -56,9 +119,10 @@ def saveCar(speed, image):
     loc = os.path.join(settings.BASE_DIR, "vsd", "static", "overspeeding")
     nameCurTime = now.strftime("%d-%m-%Y-%H-%M-%S-%f")
 
-    link = loc+nameCurTime+'.jpeg'
+    # link = loc+nameCurTime+'.jpeg'
+    link = os.path.join(loc, nameCurTime+".jpeg")
     cv2.imwrite(link, image)
-    return link
+    return os.path.join("static","overspeeding",nameCurTime+'.jpeg')
 
 
 # FUNCTION TO CALCULATE SPEED----------------------------------------------------
@@ -196,7 +260,7 @@ class VideoCamera(object):
                         car_id=carID,
                         speed=speed,
                         overspeeding=overSpeedingFlag,
-                        link=linkToSavedCar
+                        link=linkToSavedCar if linkToSavedCar != None else ""
                     )
 
                     car.save()
@@ -209,8 +273,3 @@ def gen(camera):
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
-
-class History(View):
-    def get(self, request):
-        pass
