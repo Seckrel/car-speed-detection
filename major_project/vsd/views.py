@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views import View
 import cv2
 from django.views.decorators import gzip
@@ -14,10 +14,22 @@ from .models import Car
 from datetime import date
 from django.utils import timezone
 from django.db.models import Q
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+
+speedLimit = 40
 
 
 @gzip.gzip_page
 def Home(request):
+    global speedLimit
+    if request.method == "POST":
+        print("working here", request.POST)
+        speedL = request.POST["speedL"]
+        speedLimit = int(speedL)
+        print("Change limited", speedLimit)
+
     context = {'video_feed_url': 'camfeed', "speedl": speedLimit}
     return render(request, "vsd/index.html", context)
 
@@ -91,6 +103,15 @@ class History(View):
         return render(request, "vsd/history.html", context)
 
 
+@method_decorator(csrf_exempt, name="post")
+class ChangeSpeedLimit(View):
+    def post(self, request):
+        speedL = request.POST["speedL"]
+        global speedLimit
+        speedLimit = speedL
+        print("="*5, speedLimit, "=" % 5)
+
+
 WIDTH = 1280
 HEIGHT = 720
 cropBegin = 240
@@ -98,7 +119,6 @@ mark1 = 120
 mark2 = 360
 markGap = 15
 fpsFactor = 3
-speedLimit = 40
 startTracker = {}
 endTracker = {}
 
@@ -122,7 +142,7 @@ def saveCar(speed, image):
     # link = loc+nameCurTime+'.jpeg'
     link = os.path.join(loc, nameCurTime+".jpeg")
     cv2.imwrite(link, image)
-    return os.path.join("static","overspeeding",nameCurTime+'.jpeg')
+    return os.path.join("static", "overspeeding", nameCurTime+'.jpeg')
 
 
 # FUNCTION TO CALCULATE SPEED----------------------------------------------------
